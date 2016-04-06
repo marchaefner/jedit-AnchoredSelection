@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!DOCTYPE ACTIONS SYSTEM "actions.dtd">
+<ACTIONS>
+  <ACTION NAME="toggle-anchor-select" NO_RECORD="TRUE">
+    <CODE>
+      anchoredselection.AnchoredSelectionPlugin.toggleAnchor(view);
+    </CODE>
+    <IS_SELECTED>
+      return anchoredselection.AnchoredSelectionPlugin.isAnchored(textArea);
+    </IS_SELECTED>
+  </ACTION>
+
+  <!-- TODO hide the following away in overridden build-in actions -->
+  <ACTION NAME="next-char" NO_RECORD="TRUE">
+    <CODE>
+      anchoredselection.AnchoredSelectionPlugin.goToNextCharacter(view);
+    </CODE>
+  </ACTION>
+  <ACTION NAME="prev-char" NO_RECORD="TRUE">
+    <CODE>
+      anchoredselection.AnchoredSelectionPlugin.goToPrevCharacter(view);
+    </CODE>
+  </ACTION>
+</ACTIONS>
+

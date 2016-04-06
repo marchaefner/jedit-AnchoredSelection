@@ -1,0 +1,11 @@
+<!-- :tabSize=2:indentSize=2:noTabs=true: -->
+<project name="AnchoredSelection" default="dist.nojavadoc">
+  <description>
+      Ant build file for the AnchoredSelection plugin for jEdit.
+  </description>
+  <property file="../build.properties" />
+  <property file="build.properties" />
+  <property name="compiler.target" value="1.6" />
+  <!-- <property name="user-doc.xml" location="users-guide.xml" /> -->
+  <import file="${build.support}/plugin-build.xml" />
+</project>

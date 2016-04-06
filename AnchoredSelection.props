@@ -1,0 +1,16 @@
+plugin.anchoredselection.AnchoredSelectionPlugin.activate=defer
+plugin.anchoredselection.AnchoredSelectionPlugin.name=AnchoredSelection
+plugin.anchoredselection.AnchoredSelectionPlugin.version=0.1
+plugin.anchoredselection.AnchoredSelectionPlugin.author=Marc H&auml;fner
+plugin.anchoredselection.AnchoredSelectionPlugin.description=Selection moves with caret
+
+# dependencies
+plugin.anchoredselection.AnchoredSelection.depend.0=jdk 1.6
+plugin.anchoredselection.AnchoredSelection.depend.1=jedit 04.05.99.02
+
+# action labels
+toggle-anchor-select.label=Anchored Selection
+
+# statubar icon
+statusbar.anchorSelect.label=Buffer anchored selection mode
+view.status.anchor-tooltip=Anchored selection mode (click to change)
