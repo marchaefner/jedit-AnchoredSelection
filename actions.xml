@@ -9,17 +9,5 @@
       return anchoredselection.AnchoredSelectionPlugin.isAnchored(textArea);
     </IS_SELECTED>
   </ACTION>
-
-  <!-- TODO hide the following away in overridden build-in actions -->
-  <ACTION NAME="next-char" NO_RECORD="TRUE">
-    <CODE>
-      anchoredselection.AnchoredSelectionPlugin.goToNextCharacter(view);
-    </CODE>
-  </ACTION>
-  <ACTION NAME="prev-char" NO_RECORD="TRUE">
-    <CODE>
-      anchoredselection.AnchoredSelectionPlugin.goToPrevCharacter(view);
-    </CODE>
-  </ACTION>
 </ACTIONS>
 

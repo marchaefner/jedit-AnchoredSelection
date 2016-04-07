@@ -32,15 +32,23 @@ import java.util.WeakHashMap;
 public class AnchoredSelectionPlugin extends EditPlugin {
     public static final String NAME = "anchoredselection";
     public static final String OPTION_PREFIX = "options.anchoredselection.";
-    final static String[] copyActionNames = new String[] {
+
+    static final String[] copyActionNames = new String[] {
         "copy", "copy-append",
         "copy-string-register", "copy-append-string-register"
     };
-    final static String[] selectActionNames = new String[]{
+    static final String[] selectActionNames = new String[]{
         "select-none", "select-all",
         "select-fold", "select-paragraph", "select-block", "select-line-range",
         "select-line", "select-word"
     };
+    static final String[] caretMoveActionNames = new String[]{
+        "next-char", "prev-char",   // place caret at start/end of selection
+        "next-line", "prev-line"    // lose virtual width of rect selection
+    };
+    static final String ACTION_METHOD_PREFIX =
+        "anchoredselection.AnchoredSelectionPlugin.";
+
     static ActionSet overriddenBuiltInActionSet;
     static ActionSet builtinActionSet;
     static AnchorMap anchorMap;
@@ -61,6 +69,9 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         bufferHandler.removeAll();
     }
 
+    static Set<TextArea> skipCaretUpdate =
+                Collections.newSetFromMap(new WeakHashMap<TextArea, Boolean>());
+
     static Handler caretHandler = new Handler<TextArea>() {
         CaretListener listener = new CaretListener() {
             public void caretUpdate(CaretEvent event) {
@@ -70,13 +81,17 @@ public class AnchoredSelectionPlugin extends EditPlugin {
             }
         };
 
-        Set<TextArea> skipCaretUpdate =
-                Collections.newSetFromMap(new WeakHashMap<TextArea, Boolean>());
         void resizeSelection(TextArea textArea) {
             if(!skipCaretUpdate.remove(textArea)) {
                 Integer anchor = anchorMap.get(textArea);
                 if(anchor != null) {
                     int caret = textArea.getCaretPosition();
+                    Selection selection = textArea.getSelectionAtOffset(caret);
+                    if(selection != null
+                            && selection.getStart() == Math.min(caret, anchor)
+                            && selection.getEnd() == Math.max(caret,anchor)) {
+                        return;
+                    }
                     skipCaretUpdate.add(textArea);
                     textArea.resizeSelection(anchor, caret, 0,
                                     textArea.isRectangularSelectionEnabled());
@@ -176,60 +191,47 @@ public class AnchoredSelectionPlugin extends EditPlugin {
 
     public static void toggleAnchor(View view) {
         if(isAnchored(view.getTextArea())) {
-            recordMacro(view,
-                        "anchoredselection.AnchoredSelectionPlugin.raiseAnchor(view);");
+            recordMacro(view, ACTION_METHOD_PREFIX + "raiseAnchor(view);");
             raiseAnchor(view);
         } else {
-            recordMacro(view,
-                        "anchoredselection.AnchoredSelectionPlugin.dropAnchor(view);");
+            recordMacro(view, ACTION_METHOD_PREFIX + "dropAnchor(view);");
             dropAnchor(view);
         }
     }
 
     // }}}
 
-    // {{{ unconditionaly overridden actions
-    // next-char and prev-char place the caret at end or beginning of selection
-    // which breaks the selection extension in anchored selection mode.
-    // As a workaround call the selecting variant if anchored selection is active.
-
-    public static void goToPrevCharacter(View view) {
-        TextArea textArea = view.getTextArea();
-        boolean select = isAnchored(textArea);
-        recordMacro(view, "textArea.goToPrevCharacter(" + select + ")");
-        textArea.goToPrevCharacter(select);
-    }
-
-    public static void goToNextCharacter(View view) {
-        TextArea textArea = view.getTextArea();
-        boolean select = isAnchored(textArea);
-        recordMacro(view, "textArea.goToNextCharacter(" + select + ")");
-        textArea.goToNextCharacter(select);
-    }
-
-    // }}}
-
-
+    // {{{ action wrappers
     public static void raiseAnchorAndInvoke(View view, String actionName) {
         if(isAnchored(view.getTextArea())) {
-            recordMacro(view,
-                        "anchoredselection.AnchoredSelectionPlugin.raiseAnchor(view);");
+            recordMacro(view, ACTION_METHOD_PREFIX + "raiseAnchor(view);");
             raiseAnchor(view);
         }
-        EditAction action = builtinActionSet.getAction(actionName);
-        if(!action.noRecord()) {
-            recordMacro(view, action.getCode());
-        }
-        action.invoke(view);
+        invokeAction(view, actionName);
     }
 
-    private static EditAction wrapAction(String actionName) {
+    public static void invokeSelectVariant(View view, String actionName) {
+        TextArea textArea = view.getTextArea();
+        if(isAnchored(textArea)) {
+            actionName = "select-" + actionName;
+            // the action will fire two caret updates: first from caret move
+            // and then from selection resizing. We skip the first to avoid
+            // reseting the selection and losing the virtual width of a
+            // rectangular selection
+            skipCaretUpdate.add(textArea);
+        }
+        invokeAction(view, actionName);
+    }
+    // }}}
+
+    private static EditAction wrapAction(String actionName, String method) {
         EditAction action = builtinActionSet.getAction(actionName);
         if(action == null) {
             return null;
         }
-        StringBuilder code = new StringBuilder(140);
-        code.append("anchoredselection.AnchoredSelectionPlugin.raiseAnchorAndInvoke");
+        StringBuilder code = new StringBuilder(100);
+        code.append(ACTION_METHOD_PREFIX);
+        code.append(method);
         code.append("(view, \"");
         code.append(actionName);
         code.append("\");");
@@ -246,13 +248,19 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         overriddenBuiltInActionSet = new ActionSet(
             builtinActionSet.getLabel() + " - anchored selection compatible");
         for(String actionName: selectActionNames) {
-            action = wrapAction(actionName);
+            action = wrapAction(actionName, "raiseAnchorAndInvoke");
             if(action != null) {
                 overriddenBuiltInActionSet.addAction(action);
             }
         }
         for(String actionName: copyActionNames) {
-            action = wrapAction(actionName);
+            action = wrapAction(actionName, "raiseAnchorAndInvoke");
+            if(action != null) {
+                overriddenBuiltInActionSet.addAction(action);
+            }
+        }
+        for(String actionName: caretMoveActionNames) {
+            action = wrapAction(actionName, "invokeSelectVariant");
             if(action != null) {
                 overriddenBuiltInActionSet.addAction(action);
             }
@@ -268,6 +276,14 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         if(recorder != null) {
             recorder.record(cmd);
         }
+    }
+
+    private static void invokeAction(View view, String actionName) {
+        EditAction action = builtinActionSet.getAction(actionName);
+        if(!action.noRecord()) {
+            recordMacro(view, action.getCode());
+        }
+        action.invoke(view);
     }
     // }}}
 }
