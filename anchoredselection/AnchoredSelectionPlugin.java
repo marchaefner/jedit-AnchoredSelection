@@ -10,6 +10,7 @@ import org.gjt.sp.jedit.EditAction;
 import org.gjt.sp.jedit.jEdit;
 import org.gjt.sp.jedit.Macros;
 import org.gjt.sp.jedit.View;
+import org.gjt.sp.jedit.EditPane;
 import org.gjt.sp.jedit.textarea.TextArea;
 import org.gjt.sp.jedit.textarea.Selection;
 import org.gjt.sp.jedit.buffer.JEditBuffer;
@@ -19,12 +20,9 @@ import org.gjt.sp.jedit.EditBus.EBHandler;
 import org.gjt.sp.jedit.msg.EditPaneUpdate;
 import org.gjt.sp.jedit.msg.ViewUpdate;
 
-import org.gjt.sp.util.Log;
-
 import javax.swing.event.CaretListener;
 import javax.swing.event.CaretEvent;
 import java.util.Set;
-import java.util.Map;
 import java.util.Collections;
 import java.util.WeakHashMap;
 // }}}
@@ -109,15 +107,12 @@ public class AnchoredSelectionPlugin extends EditPlugin {
 
     static Handler bufferHandler = new Handler<JEditBuffer>() {
         BufferListener listener = new BufferAdapter() {
-            public void preContentInserted(JEditBuffer buffer, int startLine,
-                                            int offset, int numLines, int length) {
-                anchorMap.remove(buffer);
-                updateAllWidgets();
-            }
-
             public void preContentRemoved(JEditBuffer buffer, int startLine,
                                             int offset, int numLines, int length) {
-                anchorMap.remove(buffer);
+                anchorMap.remove(buffer, offset, length);
+                if(!anchorMap.contains(buffer)) {
+                    bufferHandler.removeFrom(buffer);
+                }
                 updateAllWidgets();
             }
         };
@@ -131,14 +126,22 @@ public class AnchoredSelectionPlugin extends EditPlugin {
 
     @EBHandler
     public void handleEditPaneUpdate(EditPaneUpdate updateMessage) {
-        if(updateMessage.getWhat().equals(EditPaneUpdate.BUFFER_CHANGED)) {
-            updateWidget(updateMessage.getEditPane().getView());
+        if(EditPaneUpdate.BUFFER_CHANGED.equals(updateMessage.getWhat())) {
+            EditPane editPane = updateMessage.getEditPane();
+            TextArea textArea = editPane.getTextArea();
+            boolean isAnchored = isAnchored(textArea);
+            if(isAnchored) {
+                caretHandler.listenTo(textArea);
+            } else {
+                caretHandler.removeFrom(textArea);
+            }
+            updateWidget(editPane.getView(), isAnchored);
         }
     }
 
     @EBHandler
     public void handleViewUpdate(ViewUpdate updateMessage) {
-        if(updateMessage.getWhat().equals(ViewUpdate.EDIT_PANE_CHANGED)) {
+        if(ViewUpdate.EDIT_PANE_CHANGED.equals(updateMessage.getWhat())) {
             updateWidget(updateMessage.getView());
         }
     }
@@ -157,9 +160,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
     }
 
 
-
     // {{{ public interface
-
     public static boolean isAnchored(TextArea textArea) {
         return anchorMap.contains(textArea);
     }
@@ -183,9 +184,12 @@ public class AnchoredSelectionPlugin extends EditPlugin {
 
     public static void raiseAnchor(View view) {
         TextArea textArea = view.getTextArea();
+        JEditBuffer buffer = textArea.getBuffer();
         anchorMap.remove(textArea);
         caretHandler.removeFrom(textArea);
-        bufferHandler.removeFrom(textArea.getBuffer());
+        if(!anchorMap.contains(buffer)) {
+            bufferHandler.removeFrom(buffer);
+        }
         updateWidget(view, false);
     }
 
@@ -198,7 +202,6 @@ public class AnchoredSelectionPlugin extends EditPlugin {
             dropAnchor(view);
         }
     }
-
     // }}}
 
     // {{{ action wrappers
