@@ -5,7 +5,7 @@ This [jEdit] plugin provides an Anchored Selection Mode where the current select
 The plugin brings:
 
   * An "Anchored selection" action (`toggle-anchor-select`) which can be bound to a keyboard shortcut.
-  * A status bar widget which can be added in Global Options > Status Bar > Widgets (requires jEdit 5).
+  * A status bar widget which can be added in Global Options > Status Bar > Widgets.
   * An API for macros:
       * `anchoredselection.AnchoredSelectionPlugin.isAnchored(textArea)`
       * `anchoredselection.AnchoredSelectionPlugin.toggleAnchor(view)`
@@ -25,7 +25,6 @@ Anchored selection mode ends automatically:
 
   * Statusbar widget: Re/Unloading the plugin does not remove the widget or its handlers, i.e. unloading does not actually work. This needs a crafty workaround due to jEdits wanting statusbar implementation.
   * Changing keyboard shortcuts for overridden actions must be done in the overridden action set ("Builtin Commands - anchored selection compatible").
-  * Statusbar widget: Does not appear anywhere in jEdit 4.5.2 - needs investigation.
 
 ### TODOs
   * general code cleanup

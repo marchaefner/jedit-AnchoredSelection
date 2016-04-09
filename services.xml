@@ -4,4 +4,8 @@
   <SERVICE CLASS="org.gjt.sp.jedit.gui.statusbar.StatusWidgetFactory" NAME="anchorSelect">
     new anchoredselection.AnchorWidgetFactory();
   </SERVICE>
+  <!-- same as above but for jEdit version < 5.0 -->
+  <SERVICE CLASS="org.gjt.sp.jedit.gui.statusbar.StatusWidget" NAME="anchorSelect">
+    new anchoredselection.AnchorWidgetFactory();
+  </SERVICE>
 </SERVICES>
