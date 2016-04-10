@@ -54,21 +54,48 @@ public class AnchoredSelectionPlugin extends EditPlugin {
     static ActionSet overriddenBuiltInActionSet;
     static ActionSet builtinActionSet;
     static AnchorMap anchorMap;
+    static boolean shuttingDown = false;
 
     @Override
     public void start()	{
         builtinActionSet = jEdit.getBuiltInActionSet();
         anchorMap = new AnchorMap();
         installActions();
+        resetStatusBar();
         EditBus.addToBus(this);
     }
 
     @Override
     public void stop()	{
+        shuttingDown = true;
         EditBus.removeFromBus(this);
+        resetStatusBar();
         removeActions();
         caretHandler.removeAll();
         bufferHandler.removeAll();
+    }
+
+    /* Ugly hack to update the statusbar on plugin removal / restart.
+     * Change the "view.status" property so it's no longer equal to
+     * gui.StatusBar.currentBar but StringTokenizer produces the same tokens.
+     * This will induce StatusBar.propertiesChanged to rebuild the status bar
+     * (and request a widget from AnchorWidgetFactory which will only deliver
+     * if AnchoredSelectionPlugin.shuttingDown is false).
+     */
+    private void resetStatusBar() {
+        String statusBar = jEdit.getProperty("view.status");
+        if(statusBar == null || statusBar.length() == 0) {
+            return;
+        }
+        if(statusBar.startsWith(" ")) {
+            statusBar = statusBar.substring(1);
+        } else {
+            statusBar = " " + statusBar;
+        }
+        jEdit.setProperty("view.status", statusBar);
+        for(View view: jEdit.getViews()) {
+            view.getStatus().propertiesChanged();
+        }
     }
 
     static Set<TextArea> skipCaretUpdate =

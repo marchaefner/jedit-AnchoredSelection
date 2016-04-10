@@ -1,6 +1,6 @@
-plugin.anchoredselection.AnchoredSelectionPlugin.activate=defer
+plugin.anchoredselection.AnchoredSelectionPlugin.activate=startup
 plugin.anchoredselection.AnchoredSelectionPlugin.name=AnchoredSelection
-plugin.anchoredselection.AnchoredSelectionPlugin.version=0.1
+plugin.anchoredselection.AnchoredSelectionPlugin.version=0.2
 plugin.anchoredselection.AnchoredSelectionPlugin.author=Marc H&auml;fner
 plugin.anchoredselection.AnchoredSelectionPlugin.description=Selection moves with caret
 

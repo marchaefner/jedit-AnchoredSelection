@@ -13,6 +13,9 @@ public class AnchorWidgetFactory implements StatusWidgetFactory {
     static Map<View, AnchorWidget> widgets = new WeakHashMap<View, AnchorWidget>();
 
     public Widget getWidget(View view) {
+        if(AnchoredSelectionPlugin.shuttingDown) {
+            return null;
+        }
         AnchorWidget widget = new AnchorWidget(view);
         widgets.put(view, widget);
         return widget;

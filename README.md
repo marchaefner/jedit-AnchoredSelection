@@ -21,10 +21,6 @@ Anchored selection mode ends automatically:
   * on copy actions ("Copy" `C+c`, "Copy Append" `C+e C+a`, etc.)
   * when content at the anchor position is deleted, usually by typing, cutting or pasting in the current selection
 
-### Known issues
-
-  * Statusbar widget: Re/Unloading the plugin does not remove the widget or its handlers, i.e. unloading does not actually work. This needs a crafty workaround due to jEdits wanting statusbar implementation.
-
 ### TODOs
   * general code cleanup
   * add some docs
