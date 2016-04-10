@@ -19,6 +19,7 @@ import org.gjt.sp.jedit.buffer.BufferListener;
 import org.gjt.sp.jedit.EditBus.EBHandler;
 import org.gjt.sp.jedit.msg.EditPaneUpdate;
 import org.gjt.sp.jedit.msg.ViewUpdate;
+import org.gjt.sp.jedit.msg.PropertiesChanged;
 
 import javax.swing.event.CaretListener;
 import javax.swing.event.CaretEvent;
@@ -44,6 +45,9 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         "next-char", "prev-char",   // place caret at start/end of selection
         "next-line", "prev-line"    // lose virtual width of rect selection
     };
+    static final String[] optionActionNames = new String[]{
+        "combined-options", "global-options", "plugin-options"
+    };
     static final String ACTION_METHOD_PREFIX =
         "anchoredselection.AnchoredSelectionPlugin.";
 
@@ -62,7 +66,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
     @Override
     public void stop()	{
         EditBus.removeFromBus(this);
-        jEdit.removeActionSet(overriddenBuiltInActionSet);
+        removeActions();
         caretHandler.removeAll();
         bufferHandler.removeAll();
     }
@@ -146,6 +150,14 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         }
     }
 
+    @EBHandler
+    public void handlePropertiesChanged(PropertiesChanged changedMessage) {
+        // jEdit sends this with a source null after the options dialog closes.
+        if(changedMessage.getSource() == null) {
+            installActions();
+        }
+    }
+
 
     static void updateWidget(View view) {
         updateWidget(view, isAnchored(view.getTextArea()));
@@ -225,6 +237,10 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         }
         invokeAction(view, actionName);
     }
+    public static void removeActionsAndInvoke(View view, String actionName) {
+        removeActions();
+        invokeAction(view, actionName);
+    }
     // }}}
 
     private static EditAction wrapAction(String actionName, String method) {
@@ -244,9 +260,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
     }
 
     static void installActions() {
-        if(overriddenBuiltInActionSet != null) {
-            jEdit.removeActionSet(overriddenBuiltInActionSet);
-        }
+        removeActions();
         EditAction action;
         overriddenBuiltInActionSet = new ActionSet(
             builtinActionSet.getLabel() + " - anchored selection compatible");
@@ -268,7 +282,20 @@ public class AnchoredSelectionPlugin extends EditPlugin {
                 overriddenBuiltInActionSet.addAction(action);
             }
         }
+        for(String actionName: optionActionNames) {
+            action = wrapAction(actionName, "removeActionsAndInvoke");
+            if(action != null) {
+                overriddenBuiltInActionSet.addAction(action);
+            }
+        }
         jEdit.addActionSet(overriddenBuiltInActionSet);
+    }
+
+    static void removeActions() {
+        if(overriddenBuiltInActionSet != null) {
+            jEdit.removeActionSet(overriddenBuiltInActionSet);
+            overriddenBuiltInActionSet = null;
+        }
     }
 
     /**

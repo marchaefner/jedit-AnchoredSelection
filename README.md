@@ -24,7 +24,6 @@ Anchored selection mode ends automatically:
 ### Known issues
 
   * Statusbar widget: Re/Unloading the plugin does not remove the widget or its handlers, i.e. unloading does not actually work. This needs a crafty workaround due to jEdits wanting statusbar implementation.
-  * Changing keyboard shortcuts for overridden actions must be done in the overridden action set ("Builtin Commands - anchored selection compatible").
 
 ### TODOs
   * general code cleanup
