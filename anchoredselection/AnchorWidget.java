@@ -24,7 +24,7 @@ class AnchorWidget implements Widget {
         widget.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent evt) {
-                AnchoredSelectionPlugin.toggleAnchor(view);
+                Actions.toggleAnchoredSelectionEnabled(view);
             }
         });
     }
@@ -38,7 +38,7 @@ class AnchorWidget implements Widget {
     }
 
     public void update() {
-        update(AnchoredSelectionPlugin.isAnchored(view.getTextArea()));
+        update(Actions.isAnchoredSelectionEnabled(view));
     }
 
     void update(boolean isAnchored) {

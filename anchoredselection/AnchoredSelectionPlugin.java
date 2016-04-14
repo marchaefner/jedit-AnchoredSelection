@@ -3,12 +3,8 @@ package anchoredselection;
 
 // {{{ Imports
 import org.gjt.sp.jedit.EditPlugin;
-import org.gjt.sp.jedit.ActionSet;
 import org.gjt.sp.jedit.EditBus;
-import org.gjt.sp.jedit.BeanShellAction;
-import org.gjt.sp.jedit.EditAction;
 import org.gjt.sp.jedit.jEdit;
-import org.gjt.sp.jedit.Macros;
 import org.gjt.sp.jedit.View;
 import org.gjt.sp.jedit.EditPane;
 import org.gjt.sp.jedit.textarea.TextArea;
@@ -32,35 +28,13 @@ public class AnchoredSelectionPlugin extends EditPlugin {
     public static final String NAME = "anchoredselection";
     public static final String OPTION_PREFIX = "options.anchoredselection.";
 
-    static final String[] copyActionNames = new String[] {
-        "copy", "copy-append",
-        "copy-string-register", "copy-append-string-register"
-    };
-    static final String[] selectActionNames = new String[]{
-        "select-none", "select-all",
-        "select-fold", "select-paragraph", "select-block", "select-line-range",
-        "select-line", "select-word"
-    };
-    static final String[] caretMoveActionNames = new String[]{
-        "next-char", "prev-char",   // place caret at start/end of selection
-        "next-line", "prev-line"    // lose virtual width of rect selection
-    };
-    static final String[] optionActionNames = new String[]{
-        "combined-options", "global-options", "plugin-options"
-    };
-    static final String ACTION_METHOD_PREFIX =
-        "anchoredselection.AnchoredSelectionPlugin.";
-
-    static ActionSet overriddenBuiltInActionSet;
-    static ActionSet builtinActionSet;
     static AnchorMap anchorMap;
     static boolean shuttingDown = false;
 
     @Override
     public void start()	{
-        builtinActionSet = jEdit.getBuiltInActionSet();
         anchorMap = new AnchorMap();
-        installActions();
+        Actions.overrideBuiltInActions();
         resetStatusBar();
         EditBus.addToBus(this);
     }
@@ -70,7 +44,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         shuttingDown = true;
         EditBus.removeFromBus(this);
         resetStatusBar();
-        removeActions();
+        Actions.removeOverriddenActions();
         caretHandler.removeAll();
         bufferHandler.removeAll();
     }
@@ -121,7 +95,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
                             && selection.getEnd() == Math.max(caret,anchor)) {
                         return;
                     }
-                    skipCaretUpdate.add(textArea);
+                    skipCaretUpdate(textArea);
                     textArea.resizeSelection(anchor, caret, 0,
                                     textArea.isRectangularSelectionEnabled());
                 }
@@ -160,7 +134,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         if(EditPaneUpdate.BUFFER_CHANGED.equals(updateMessage.getWhat())) {
             EditPane editPane = updateMessage.getEditPane();
             TextArea textArea = editPane.getTextArea();
-            boolean isAnchored = isAnchored(textArea);
+            boolean isAnchored = hasAnchor(textArea);
             if(isAnchored) {
                 caretHandler.listenTo(textArea);
             } else {
@@ -181,13 +155,13 @@ public class AnchoredSelectionPlugin extends EditPlugin {
     public void handlePropertiesChanged(PropertiesChanged changedMessage) {
         // jEdit sends this with a source null after the options dialog closes.
         if(changedMessage.getSource() == null) {
-            installActions();
+            Actions.overrideBuiltInActions();
         }
     }
 
 
     static void updateWidget(View view) {
-        updateWidget(view, isAnchored(view.getTextArea()));
+        updateWidget(view, hasAnchor(view.getTextArea()));
     }
 
     static void updateWidget(View view, Boolean isAnchored) {
@@ -199,12 +173,17 @@ public class AnchoredSelectionPlugin extends EditPlugin {
     }
 
 
-    // {{{ public interface
-    public static boolean isAnchored(TextArea textArea) {
+    // {{{ Interface
+
+    static void skipCaretUpdate(TextArea textArea) {
+        skipCaretUpdate.add(textArea);
+    }
+
+    static boolean hasAnchor(TextArea textArea) {
         return anchorMap.contains(textArea);
     }
 
-    public static void dropAnchor(View view) {
+    static void dropAnchor(View view) {
         TextArea textArea = view.getTextArea();
         int caret = textArea.getCaretPosition();
         int anchor = caret;
@@ -221,7 +200,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         updateWidget(view, true);
     }
 
-    public static void raiseAnchor(View view) {
+    static void raiseAnchor(View view) {
         TextArea textArea = view.getTextArea();
         JEditBuffer buffer = textArea.getBuffer();
         anchorMap.remove(textArea);
@@ -230,117 +209,6 @@ public class AnchoredSelectionPlugin extends EditPlugin {
             bufferHandler.removeFrom(buffer);
         }
         updateWidget(view, false);
-    }
-
-    public static void toggleAnchor(View view) {
-        if(isAnchored(view.getTextArea())) {
-            recordMacro(view, ACTION_METHOD_PREFIX + "raiseAnchor(view);");
-            raiseAnchor(view);
-        } else {
-            recordMacro(view, ACTION_METHOD_PREFIX + "dropAnchor(view);");
-            dropAnchor(view);
-        }
-    }
-    // }}}
-
-    // {{{ action wrappers
-    public static void raiseAnchorAndInvoke(View view, String actionName) {
-        if(isAnchored(view.getTextArea())) {
-            recordMacro(view, ACTION_METHOD_PREFIX + "raiseAnchor(view);");
-            raiseAnchor(view);
-        }
-        invokeAction(view, actionName);
-    }
-
-    public static void invokeSelectVariant(View view, String actionName) {
-        TextArea textArea = view.getTextArea();
-        if(isAnchored(textArea)) {
-            actionName = "select-" + actionName;
-            // the action will fire two caret updates: first from caret move
-            // and then from selection resizing. We skip the first to avoid
-            // reseting the selection and losing the virtual width of a
-            // rectangular selection
-            skipCaretUpdate.add(textArea);
-        }
-        invokeAction(view, actionName);
-    }
-    public static void removeActionsAndInvoke(View view, String actionName) {
-        removeActions();
-        invokeAction(view, actionName);
-    }
-    // }}}
-
-    private static EditAction wrapAction(String actionName, String method) {
-        EditAction action = builtinActionSet.getAction(actionName);
-        if(action == null) {
-            return null;
-        }
-        StringBuilder code = new StringBuilder(100);
-        code.append(ACTION_METHOD_PREFIX);
-        code.append(method);
-        code.append("(view, \"");
-        code.append(actionName);
-        code.append("\");");
-        return new BeanShellAction(actionName, code.toString(), null,
-                                    action.noRepeat(), true,
-                                    action.noRememberLast());
-    }
-
-    static void installActions() {
-        removeActions();
-        EditAction action;
-        overriddenBuiltInActionSet = new ActionSet(
-            builtinActionSet.getLabel() + " - anchored selection compatible");
-        for(String actionName: selectActionNames) {
-            action = wrapAction(actionName, "raiseAnchorAndInvoke");
-            if(action != null) {
-                overriddenBuiltInActionSet.addAction(action);
-            }
-        }
-        for(String actionName: copyActionNames) {
-            action = wrapAction(actionName, "raiseAnchorAndInvoke");
-            if(action != null) {
-                overriddenBuiltInActionSet.addAction(action);
-            }
-        }
-        for(String actionName: caretMoveActionNames) {
-            action = wrapAction(actionName, "invokeSelectVariant");
-            if(action != null) {
-                overriddenBuiltInActionSet.addAction(action);
-            }
-        }
-        for(String actionName: optionActionNames) {
-            action = wrapAction(actionName, "removeActionsAndInvoke");
-            if(action != null) {
-                overriddenBuiltInActionSet.addAction(action);
-            }
-        }
-        jEdit.addActionSet(overriddenBuiltInActionSet);
-    }
-
-    static void removeActions() {
-        if(overriddenBuiltInActionSet != null) {
-            jEdit.removeActionSet(overriddenBuiltInActionSet);
-            overriddenBuiltInActionSet = null;
-        }
-    }
-
-    /**
-     *  Record with current macro recorder (if one is active).
-     */
-    private static void recordMacro(View view, String cmd) {
-        Macros.Recorder recorder = view.getMacroRecorder();
-        if(recorder != null) {
-            recorder.record(cmd);
-        }
-    }
-
-    private static void invokeAction(View view, String actionName) {
-        EditAction action = builtinActionSet.getAction(actionName);
-        if(!action.noRecord()) {
-            recordMacro(view, action.getCode());
-        }
-        action.invoke(view);
     }
     // }}}
 }

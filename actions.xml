@@ -3,11 +3,10 @@
 <ACTIONS>
   <ACTION NAME="toggle-anchor-select" NO_RECORD="TRUE">
     <CODE>
-      anchoredselection.AnchoredSelectionPlugin.toggleAnchor(view);
+      anchoredselection.Actions.toggleAnchoredSelectionEnabled(view);
     </CODE>
     <IS_SELECTED>
-      return anchoredselection.AnchoredSelectionPlugin.isAnchored(textArea);
+      return anchoredselection.Actions.isAnchoredSelectionEnabled(view);
     </IS_SELECTED>
   </ACTION>
 </ACTIONS>
-

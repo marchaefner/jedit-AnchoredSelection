@@ -7,11 +7,9 @@ The plugin brings:
   * An "Anchored selection" action (`toggle-anchor-select`) which can be bound to a keyboard shortcut.
   * A status bar widget which can be added in Global Options > Status Bar > Widgets.
   * An API for macros:
-      * `anchoredselection.AnchoredSelectionPlugin.isAnchored(textArea)`
-      * `anchoredselection.AnchoredSelectionPlugin.toggleAnchor(view)`
-      * `anchoredselection.AnchoredSelectionPlugin.dropAnchor(view)`
-      * `anchoredselection.AnchoredSelectionPlugin.raiseAnchor(view)`
-    (These may change their names/location in the foreseeable future.)
+      * `anchoredselection.Actions.isAnchoredSelectionEnabled(view)`
+      * `anchoredselection.Actions.setAnchoredSelectionEnabled(view, boolean)`
+      * `anchoredselection.Actions.toggleAnchoredSelectionEnabled(view)`
 
 In anchored selection mode the selection will extend from the anchor to the current caret position. The caret may be moved by keyboard, mouse, search or for any other reason.
 
