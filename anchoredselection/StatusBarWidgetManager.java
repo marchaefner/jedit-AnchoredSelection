@@ -9,27 +9,28 @@ import java.util.Map;
 import java.util.WeakHashMap;
 //}}}
 
-public class AnchorWidgetFactory implements StatusWidgetFactory {
-    static Map<View, AnchorWidget> widgets = new WeakHashMap<View, AnchorWidget>();
+public class StatusBarWidgetManager implements StatusWidgetFactory {
+    static Map<View, StatusBarWidget> widgets =
+            new WeakHashMap<View, StatusBarWidget>();
 
     public Widget getWidget(View view) {
         if(AnchoredSelectionPlugin.shuttingDown) {
             return null;
         }
-        AnchorWidget widget = new AnchorWidget(view);
+        StatusBarWidget widget = new StatusBarWidget(view);
         widgets.put(view, widget);
         return widget;
     }
 
     static void updateWidget(View view, Boolean isAnchored) {
-        AnchorWidget widget = widgets.get(view);
+        StatusBarWidget widget = widgets.get(view);
         if(widget != null) {
             widget.update(isAnchored);
         }
     }
 
     static void updateAllWidgets() {
-        for(AnchorWidget widget: widgets.values()) {
+        for(StatusBarWidget widget: widgets.values()) {
             widget.update();
         }
     }

@@ -53,7 +53,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
      * Change the "view.status" property so it's no longer equal to
      * gui.StatusBar.currentBar but StringTokenizer produces the same tokens.
      * This will induce StatusBar.propertiesChanged to rebuild the status bar
-     * (and request a widget from AnchorWidgetFactory which will only deliver
+     * (and request a widget from StatusBarWidgetManager which will only deliver
      * if AnchoredSelectionPlugin.shuttingDown is false).
      */
     private void resetStatusBar() {
@@ -165,11 +165,11 @@ public class AnchoredSelectionPlugin extends EditPlugin {
     }
 
     static void updateWidget(View view, Boolean isAnchored) {
-        AnchorWidgetFactory.updateWidget(view, isAnchored);
+        StatusBarWidgetManager.updateWidget(view, isAnchored);
     }
 
     static void updateAllWidgets() {
-        AnchorWidgetFactory.updateAllWidgets();
+        StatusBarWidgetManager.updateAllWidgets();
     }
 
 

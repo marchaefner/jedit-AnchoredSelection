@@ -13,11 +13,11 @@ import javax.swing.JLabel;
 import javax.swing.SwingConstants;
 //}}}
 
-class AnchorWidget implements Widget {
+class StatusBarWidget implements Widget {
     private final JLabel widget;
     private final View view;
 
-    public AnchorWidget(final View view) {
+    public StatusBarWidget(final View view) {
         this.view = view;
         widget = new ToolTipLabel();
         widget.setHorizontalAlignment(SwingConstants.CENTER);
