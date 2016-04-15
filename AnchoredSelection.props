@@ -11,6 +11,8 @@ plugin.anchoredselection.AnchoredSelection.depend.1=jedit 04.05.99.02
 # action labels
 toggle-anchor-select.label=Anchored Selection
 
-# statubar icon
+# statubar widget
+## label for "Status Bar > Widget" option (needs to have this exact name)
 statusbar.anchorSelect.label=Buffer anchored selection mode
-view.status.anchor-tooltip=Anchored selection mode (click to change)
+## tooltip used by StatusBarWidget
+anchoredselection.status.anchor-tooltip=Anchored selection mode (click to change)

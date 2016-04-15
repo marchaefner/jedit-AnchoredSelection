@@ -29,47 +29,22 @@ public class AnchoredSelectionPlugin extends EditPlugin {
     public static final String OPTION_PREFIX = "options.anchoredselection.";
 
     static AnchorMap anchorMap;
-    static boolean shuttingDown = false;
 
     @Override
     public void start()	{
         anchorMap = new AnchorMap();
         Actions.overrideBuiltInActions();
-        resetStatusBar();
+        StatusBarWidgetManager.start();
         EditBus.addToBus(this);
     }
 
     @Override
     public void stop()	{
-        shuttingDown = true;
         EditBus.removeFromBus(this);
-        resetStatusBar();
+        StatusBarWidgetManager.stop();
         Actions.removeOverriddenActions();
         caretHandler.removeAll();
         bufferHandler.removeAll();
-    }
-
-    /* Ugly hack to update the statusbar on plugin removal / restart.
-     * Change the "view.status" property so it's no longer equal to
-     * gui.StatusBar.currentBar but StringTokenizer produces the same tokens.
-     * This will induce StatusBar.propertiesChanged to rebuild the status bar
-     * (and request a widget from StatusBarWidgetManager which will only deliver
-     * if AnchoredSelectionPlugin.shuttingDown is false).
-     */
-    private void resetStatusBar() {
-        String statusBar = jEdit.getProperty("view.status");
-        if(statusBar == null || statusBar.length() == 0) {
-            return;
-        }
-        if(statusBar.startsWith(" ")) {
-            statusBar = statusBar.substring(1);
-        } else {
-            statusBar = " " + statusBar;
-        }
-        jEdit.setProperty("view.status", statusBar);
-        for(View view: jEdit.getViews()) {
-            view.getStatus().propertiesChanged();
-        }
     }
 
     static Set<TextArea> skipCaretUpdate =
@@ -118,7 +93,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
                 if(!anchorMap.contains(buffer)) {
                     bufferHandler.removeFrom(buffer);
                 }
-                updateAllWidgets();
+                StatusBarWidgetManager.updateAllWidgets();
             }
         };
         void addListener(JEditBuffer buffer) {
@@ -140,14 +115,15 @@ public class AnchoredSelectionPlugin extends EditPlugin {
             } else {
                 caretHandler.removeFrom(textArea);
             }
-            updateWidget(editPane.getView(), isAnchored);
+            StatusBarWidgetManager.updateWidget(editPane.getView(), isAnchored);
         }
     }
 
     @EBHandler
     public void handleViewUpdate(ViewUpdate updateMessage) {
         if(ViewUpdate.EDIT_PANE_CHANGED.equals(updateMessage.getWhat())) {
-            updateWidget(updateMessage.getView());
+            View view = updateMessage.getView();
+            StatusBarWidgetManager.updateWidget(view, hasAnchor(view.getTextArea()));
         }
     }
 
@@ -158,20 +134,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
             Actions.overrideBuiltInActions();
         }
     }
-
-
-    static void updateWidget(View view) {
-        updateWidget(view, hasAnchor(view.getTextArea()));
-    }
-
-    static void updateWidget(View view, Boolean isAnchored) {
-        StatusBarWidgetManager.updateWidget(view, isAnchored);
-    }
-
-    static void updateAllWidgets() {
-        StatusBarWidgetManager.updateAllWidgets();
-    }
-
+    /// }}}
 
     // {{{ Interface
 
@@ -197,7 +160,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         anchorMap.set(textArea, anchor);
         caretHandler.listenTo(textArea);
         bufferHandler.listenTo(textArea.getBuffer());
-        updateWidget(view, true);
+        StatusBarWidgetManager.updateWidget(view, true);
     }
 
     static void raiseAnchor(View view) {
@@ -208,7 +171,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         if(!anchorMap.contains(buffer)) {
             bufferHandler.removeFrom(buffer);
         }
-        updateWidget(view, false);
+        StatusBarWidgetManager.updateWidget(view, false);
     }
     // }}}
 }

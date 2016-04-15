@@ -14,9 +14,12 @@ import javax.swing.SwingConstants;
 //}}}
 
 class StatusBarWidget implements Widget {
+    private final String TOOLTIP_PROPERTY =
+            "anchoredselection.status.anchor-tooltip";
     private final JLabel widget;
     private final View view;
 
+    // {{{ Widget interface implementation
     public StatusBarWidget(final View view) {
         this.view = view;
         widget = new ToolTipLabel();
@@ -36,14 +39,25 @@ class StatusBarWidget implements Widget {
     public void propertiesChanged() {
         update();
     }
+    // }}}
 
+    // {{{ update methods
+
+    /* Acquire current anchored selection state and update widget label.
+     * Called by the above propertiesChanged and from StatusBarWidgetManager
+     * in response to AnchoredSelectionPlugin methods */
     public void update() {
         update(Actions.isAnchoredSelectionEnabled(view));
     }
 
+    /* Update widget label - set enabled/disabled depending on isAnchored.
+     * Use a fancy anchor glyph if possible, else use the letter "A" where
+     * the case depends on isAnchored as well.
+     * Called by StatusBarWidgetManager in response to AnchoredSelectionPlugin
+     * methods. */
     void update(boolean isAnchored) {
-        this.widget.setToolTipText(jEdit.getProperty("view.status.anchor-tooltip"));
-        boolean anchorGlyphSupported = widget.getFont().canDisplay(9875);
+        this.widget.setToolTipText(jEdit.getProperty(TOOLTIP_PROPERTY));
+        boolean anchorGlyphSupported = widget.getFont().canDisplay(0x2693);
         if(isAnchored) {
             widget.setEnabled(true);
             widget.setText(anchorGlyphSupported ? "\u2693" : "A");
@@ -52,4 +66,5 @@ class StatusBarWidget implements Widget {
             widget.setText(anchorGlyphSupported ? "\u2693" : "a");
         }
     }
+    // }}}
 }
