@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <!DOCTYPE SERVICES SYSTEM "services.dtd">
+<!-- :tabSize=2:indentSize=2:noTabs=true: -->
 <SERVICES>
   <SERVICE CLASS="org.gjt.sp.jedit.gui.statusbar.StatusWidgetFactory" NAME="anchorSelect">
     new anchoredselection.StatusBarWidgetManager();

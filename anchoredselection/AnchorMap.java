@@ -10,26 +10,48 @@ import java.util.Map;
 import java.util.WeakHashMap;
 // }}}
 
+/**
+ *  A map of anchor positions.
+ *
+ *  An anchor is a position in a buffer in a text area (which is part of an edit
+ *  pane). Specifically, a buffer can be held by multiple text areas at the same
+ *  time.
+ *
+ *  This class provides simple interfaces for handling either the current buffer
+ *  of a given text area or a buffer in all text areas.
+ *
+ *  Anchors are stored as javax.swing.text.Position which are generated and
+ *  updated (upon content changes) by TextArea.
+ */
 class AnchorMap {
-    Map<TextArea, Map<JEditBuffer, Position>> maps =
+    private Map<TextArea, Map<JEditBuffer, Position>> bufferMaps =
             new WeakHashMap<TextArea, Map<JEditBuffer, Position>>();
 
+    // {{{ set methods
+
+    /** Set the current caret position of the current buffer of textArea as the
+     *  new anchor. */
     void set(TextArea textArea) {
         set(textArea, textArea.getCaretPosition());
     }
 
+    /** Set anchor of the current buffer of textArea. */
     void set(TextArea textArea, int anchorOffset) {
-        Map<JEditBuffer, Position> anchorMap = maps.get(textArea);
+        Map<JEditBuffer, Position> anchorMap = bufferMaps.get(textArea);
         if(anchorMap == null) {
             anchorMap = new WeakHashMap<JEditBuffer, Position>();
-            maps.put(textArea, anchorMap);
+            bufferMaps.put(textArea, anchorMap);
         }
         JEditBuffer buffer = textArea.getBuffer();
         anchorMap.put(buffer, buffer.createPosition(anchorOffset));
     }
+    // }}}
 
+    // {{{ get method
+
+    /** @return anchor position of the current buffer of textArea */
     Integer get(TextArea textArea) {
-        Map<JEditBuffer, Position> anchorMap = maps.get(textArea);
+        Map<JEditBuffer, Position> anchorMap = bufferMaps.get(textArea);
         if(anchorMap != null) {
             Position anchor = anchorMap.get(textArea.getBuffer());
             if(anchor != null) {
@@ -38,16 +60,22 @@ class AnchorMap {
         }
         return null;
     }
+    // }}}
 
+    // {{{ remove methods
+
+    /** Delete anchor position of the current buffer of textArea, */
     void remove(TextArea textArea) {
-        Map<JEditBuffer, Position> anchorMap = maps.get(textArea);
+        Map<JEditBuffer, Position> anchorMap = bufferMaps.get(textArea);
         if(anchorMap != null) {
             anchorMap.remove(textArea.getBuffer());
         }
     }
 
+    /** Delete the anchor positions of buffer in all text areas if they are
+     *  within the given range. */
     void remove(JEditBuffer buffer, int offset, int length) {
-        for(Map<JEditBuffer, Position> anchorMap: maps.values()) {
+        for(Map<JEditBuffer, Position> anchorMap: bufferMaps.values()) {
             if(!anchorMap.containsKey(buffer)) {
                 continue;
             }
@@ -57,9 +85,14 @@ class AnchorMap {
             }
         }
     }
+    // }}}
 
+    // {{{ contains method
+
+    /** @return whether the map contains an anchor position for the current
+     *  buffer of textArea. */
     boolean contains(TextArea textArea) {
-        Map<JEditBuffer, Position> anchorMap = maps.get(textArea);
+        Map<JEditBuffer, Position> anchorMap = bufferMaps.get(textArea);
         if(anchorMap == null) {
             return false;
         } else {
@@ -67,12 +100,15 @@ class AnchorMap {
         }
     }
 
+    /** @return whether the map contains an anchor position for buffer in any
+     *  textArea. */
     boolean contains(JEditBuffer buffer) {
-        for(Map<JEditBuffer, Position> anchorMap: maps.values()) {
+        for(Map<JEditBuffer, Position> anchorMap: bufferMaps.values()) {
             if(anchorMap.containsKey(buffer)) {
                 return true;
             }
         }
         return false;
     }
+    // }}}
 }

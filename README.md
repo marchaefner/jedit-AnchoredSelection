@@ -17,10 +17,9 @@ Anchored selection mode ends automatically:
 
   * for any other (incompatible) select action ("Select None" `ESCAPE`, "Select All" `S+a`, "Select Fold" `C+e w`, etc.)
   * on copy actions ("Copy" `C+c`, "Copy Append" `C+e C+a`, etc.)
-  * when content at the anchor position is deleted, usually by typing, cutting or pasting in the current selection
+  * if content at the anchor position is deleted, usually by typing, cutting or pasting in the current selection
 
 ### TODOs
-  * general code cleanup
   * add some docs
   * Maybe add options (raise anchor on copy / raise anchor on buffer switch)
 

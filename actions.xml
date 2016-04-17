@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <!DOCTYPE ACTIONS SYSTEM "actions.dtd">
+<!-- :tabSize=2:indentSize=2:noTabs=true:mode=jedit-actions: -->
 <ACTIONS>
   <ACTION NAME="toggle-anchor-select" NO_RECORD="TRUE">
     <CODE>
