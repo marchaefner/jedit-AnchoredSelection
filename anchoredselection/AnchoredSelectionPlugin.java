@@ -13,6 +13,7 @@ import org.gjt.sp.jedit.buffer.JEditBuffer;
 import org.gjt.sp.jedit.buffer.BufferAdapter;
 import org.gjt.sp.jedit.msg.EditPaneUpdate;
 import org.gjt.sp.jedit.msg.ViewUpdate;
+import org.gjt.sp.jedit.msg.PropertiesChanging;
 import org.gjt.sp.jedit.msg.PropertiesChanged;
 
 import javax.swing.event.CaretListener;
@@ -33,6 +34,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
     /* text areas for which the next caret update should be ignored */
     private static Set<TextArea> skipCaretUpdate = Collections.newSetFromMap(
                                         new WeakHashMap<TextArea, Boolean>());
+
     // {{{ Handler classes
     // build Handlers for easier adding/removal - for actual handling see below
     private static Handler<TextArea> caretHandler = new Handler<TextArea>() {
@@ -90,8 +92,8 @@ public class AnchoredSelectionPlugin extends EditPlugin {
      *  Re-set selection from the anchor to the new caret position.
      *
      *  Don't do anything if the selection is already as it should be (and
-     *  naturally if no anchor exists for the current buffer in the current text
-     *  area has no anchor set or skipCaretUpdate has been explicitly set).
+     *  naturally if no anchor exists for the current buffer or skipCaretUpdate
+     *  has been set).
      */
     private static void handleCaretUpdate(TextArea textArea) {
         if(skipCaretUpdate.remove(textArea) || !anchorMap.contains(textArea)) {
@@ -126,8 +128,8 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         StatusBarWidgetManager.updateAllWidgets();
     }
 
-    /** Add or remove the caret listener of the edit panes text area and update
-     *  the status bar widget. */
+    /** If the buffer changes add or remove the caret listener of the edit panes
+     *  text area and update the status bar widget. */
     @EditBus.EBHandler
     public void handleEditPaneUpdate(EditPaneUpdate updateMessage) {
         if(EditPaneUpdate.BUFFER_CHANGED.equals(updateMessage.getWhat())) {
@@ -143,20 +145,34 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         }
     }
 
-    /** Update the status bar widget.*/
+    /** If the edit pane changes update the status bar widget. If a view gets
+     *  activated this might be caused by canceling the options dialog -
+     *  override built-in actions (if they are not already overridden). */
     @EditBus.EBHandler
     public void handleViewUpdate(ViewUpdate updateMessage) {
-        if(ViewUpdate.EDIT_PANE_CHANGED.equals(updateMessage.getWhat())) {
+        Object what = updateMessage.getWhat();
+        if(ViewUpdate.EDIT_PANE_CHANGED.equals(what)) {
             View view = updateMessage.getView();
             StatusBarWidgetManager.updateWidget(view,
                                                 hasAnchor(view.getTextArea()));
+        } else if(ViewUpdate.ACTIVATED.equals(what)) {
+            Actions.overrideBuiltInActions();
         }
     }
 
+    /** If the options pane is closed override build-in actions*/
     @EditBus.EBHandler
     public void handlePropertiesChanged(PropertiesChanged changedMessage) {
-        // jEdit sends this with a source null after the options dialog closes.
-        if(changedMessage.getSource() == null) {
+        Actions.overrideBuiltInActions();
+    }
+
+    /** If the options dialog opens remove overridden actions, if it's canceled
+     *  re-install them. */
+    @EditBus.EBHandler
+    public void handlePropertiesChanging(PropertiesChanging message) {
+        if(PropertiesChanging.State.LOADING.equals(message.getState())) {
+            Actions.removeOverriddenActions();
+        } else if(PropertiesChanging.State.CANCELED.equals(message.getState())) {
             Actions.overrideBuiltInActions();
         }
     }
