@@ -11,7 +11,7 @@ import org.gjt.sp.jedit.View;
 import org.gjt.sp.jedit.textarea.TextArea;
 // }}}
 
-class Actions {
+public class Actions {
     // {{{ variables
 
     /** prefix for constructing qualified names of plugin actions */
