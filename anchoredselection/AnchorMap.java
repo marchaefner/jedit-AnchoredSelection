@@ -92,12 +92,8 @@ class AnchorMap {
     /** @return whether the map contains an anchor position for the current
      *  buffer of textArea. */
     boolean contains(TextArea textArea) {
-        Map<JEditBuffer, Position> anchorMap = bufferMaps.get(textArea);
-        if(anchorMap == null) {
-            return false;
-        } else {
-            return anchorMap.containsKey(textArea.getBuffer());
-        }
+        return bufferMaps.containsKey(textArea) &&
+                bufferMaps.get(textArea).containsKey(textArea.getBuffer());
     }
 
     /** @return whether the map contains an anchor position for buffer in any
