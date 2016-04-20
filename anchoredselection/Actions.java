@@ -42,8 +42,12 @@ public class Actions {
      *  differently within selections. These will be wrapped with
      *  {@link #invokeSelectVariant} */
     static final String[] caretMoveActionNames = new String[]{
-        "next-char", "prev-char",   // place caret at start/end of selection
-        "next-line", "prev-line"    // lose virtual width of rect selection
+        // actions which place caret at start/end of selection
+        "next-char", "prev-char",
+        "home", "end", "smart-home", "smart-end",
+        "line-home", "line-end", "whitespace-home", "whitespace-end",
+        // actions which lose virtual width of rect selection
+        "next-line", "prev-line"
     };
     /** Built-in actions that open options dialog. These will be wrapped with
      *  {@link #invokeOptions}. This is a workaround for the combined options
