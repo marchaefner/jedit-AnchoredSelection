@@ -3,21 +3,14 @@ package anchoredselection;
 
 // {{{ Imports
 import org.gjt.sp.jedit.EditPlugin;
-import org.gjt.sp.jedit.EditBus;
+
 import org.gjt.sp.jedit.jEdit;
 import org.gjt.sp.jedit.View;
 import org.gjt.sp.jedit.EditPane;
 import org.gjt.sp.jedit.textarea.TextArea;
 import org.gjt.sp.jedit.textarea.Selection;
 import org.gjt.sp.jedit.buffer.JEditBuffer;
-import org.gjt.sp.jedit.buffer.BufferAdapter;
-import org.gjt.sp.jedit.msg.EditPaneUpdate;
-import org.gjt.sp.jedit.msg.ViewUpdate;
-import org.gjt.sp.jedit.msg.PropertiesChanging;
-import org.gjt.sp.jedit.msg.PropertiesChanged;
 
-import javax.swing.event.CaretListener;
-import javax.swing.event.CaretEvent;
 import java.util.Set;
 import java.util.Collections;
 import java.util.WeakHashMap;
@@ -27,45 +20,14 @@ public class AnchoredSelectionPlugin extends EditPlugin {
     public static final String NAME = "anchoredselection";
     public static final String OPTION_PREFIX = "options.anchoredselection.";
 
-    // {{{ Data structures & handler scaffolding
+    // {{{ Data structures
 
     /* anchorMap holds the anchor position for each buffer in each text area */
     private static AnchorMap anchorMap = new AnchorMap();
     /* text areas for which the next caret update should be ignored */
     private static Set<TextArea> skipCaretUpdate = Collections.newSetFromMap(
                                         new WeakHashMap<TextArea, Boolean>());
-
-    // {{{ Handler classes
-    // build Handlers for easier adding/removal - for actual handling see below
-    private static Handler<TextArea> caretHandler = new Handler<TextArea>() {
-        CaretListener listener = new CaretListener() {
-            public void caretUpdate(CaretEvent event) {
-                handleCaretUpdate((TextArea)event.getSource());
-            }
-        };
-        void addListener(TextArea textArea) {
-            textArea.addCaretListener(listener);
-        }
-        void removeListener(TextArea textArea) {
-            textArea.removeCaretListener(listener);
-        }
-    };
-
-    private static Handler<JEditBuffer> bufferHandler = new Handler<JEditBuffer>() {
-        BufferAdapter listener = new BufferAdapter() {
-            public void preContentRemoved(JEditBuffer buffer, int startLine,
-                                            int offset, int lines, int length) {
-                handlePreContentRemoved(buffer, offset, length);
-            }
-        };
-        void addListener(JEditBuffer buffer) {
-            buffer.addBufferListener(listener);
-        }
-        void removeListener(JEditBuffer buffer) {
-            buffer.removeBufferListener(listener);
-        }
-    };
-    // }}} }}}
+    // }}}
 
     // {{{ Plug in startup / teardown
 
@@ -73,16 +35,14 @@ public class AnchoredSelectionPlugin extends EditPlugin {
     public void start()	{
         Actions.overrideBuiltInActions();
         StatusBarWidgetManager.start();
-        EditBus.addToBus(this);
+        Handlers.start();
     }
 
     /** Remove all listeners, overridden actions and status bar widgets. */
     public void stop()	{
-        EditBus.removeFromBus(this);
+        Handlers.stop();
         StatusBarWidgetManager.stop();
         Actions.removeOverriddenActions();
-        caretHandler.removeAll();
-        bufferHandler.removeAll();
     }
     // }}}
 
@@ -95,7 +55,7 @@ public class AnchoredSelectionPlugin extends EditPlugin {
      *  naturally if no anchor exists for the current buffer or skipCaretUpdate
      *  has been set).
      */
-    private static void handleCaretUpdate(TextArea textArea) {
+    static void handleCaretUpdate(TextArea textArea) {
         if(skipCaretUpdate.remove(textArea) || !anchorMap.contains(textArea)) {
             return;
         }
@@ -116,65 +76,56 @@ public class AnchoredSelectionPlugin extends EditPlugin {
     /**
      *  Update anchor position or remove anchor if its position was removed.
      *
-     *  If the the buffer has no anchor left in any text areas remove this
-     *  listener. Update the status bar widget in case the anchor was removed.
+     *  If the the buffer has no anchor left in any text areas remove its
+     *  listener. Also remove caret listeners from any text areas that
+     *  where the anchor was removed and update all status bar widgets.
      */
-    private static void handlePreContentRemoved(JEditBuffer buffer,
+    static void handlePreContentRemoved(JEditBuffer buffer,
                                                 int offset, int length) {
         anchorMap.remove(buffer, offset, length);
         if(!anchorMap.contains(buffer)) {
-            bufferHandler.removeFrom(buffer);
+            Handlers.bufferHandler.removeFrom(buffer);
         }
-        StatusBarWidgetManager.updateAllWidgets();
+        for(View view: jEdit.getViews()) {
+            TextArea textArea = view.getTextArea();
+            if(hasAnchor(textArea)) {
+                StatusBarWidgetManager.updateWidget(view, true);
+            } else {
+                Handlers.caretHandler.removeFrom(textArea);
+                StatusBarWidgetManager.updateWidget(view, false);
+            }
+        }
     }
 
     /** If the buffer changes add or remove the caret listener of the edit panes
      *  text area and update the status bar widget. */
-    @EditBus.EBHandler
-    public void handleEditPaneUpdate(EditPaneUpdate updateMessage) {
-        if(EditPaneUpdate.BUFFER_CHANGED.equals(updateMessage.getWhat())) {
-            EditPane editPane = updateMessage.getEditPane();
-            TextArea textArea = editPane.getTextArea();
-            boolean isAnchored = hasAnchor(textArea);
-            if(isAnchored) {
-                caretHandler.listenTo(textArea);
-            } else {
-                caretHandler.removeFrom(textArea);
-            }
-            StatusBarWidgetManager.updateWidget(editPane.getView(), isAnchored);
+    static void handleBufferChanged(EditPane editPane) {
+        TextArea textArea = editPane.getTextArea();
+        boolean isAnchored = hasAnchor(textArea);
+        if(isAnchored) {
+            Handlers.caretHandler.listenTo(textArea);
+        } else {
+            Handlers.caretHandler.removeFrom(textArea);
         }
+        StatusBarWidgetManager.updateWidget(editPane.getView(), isAnchored);
     }
 
-    /** If the edit pane changes update the status bar widget. If a view gets
-     *  activated this might be caused by canceling the options dialog -
-     *  override built-in actions (if they are not already overridden). */
-    @EditBus.EBHandler
-    public void handleViewUpdate(ViewUpdate updateMessage) {
-        Object what = updateMessage.getWhat();
-        if(ViewUpdate.EDIT_PANE_CHANGED.equals(what)) {
-            View view = updateMessage.getView();
-            StatusBarWidgetManager.updateWidget(view,
-                                                hasAnchor(view.getTextArea()));
-        } else if(ViewUpdate.ACTIVATED.equals(what)) {
-            Actions.overrideBuiltInActions();
-        }
+    /** If the edit pane changes update the status bar widget. */
+    static void handleEditPaneChanged(View view) {
+        StatusBarWidgetManager.updateWidget(view,
+                                            hasAnchor(view.getTextArea()));
     }
 
-    /** If the options pane is closed override build-in actions*/
-    @EditBus.EBHandler
-    public void handlePropertiesChanged(PropertiesChanged changedMessage) {
+    /** If the options dialog is opened hide overridden actions.
+     *  (This handler might be called multiple times.) */
+    static void handleOptionsOpening() {
+        Actions.removeOverriddenActions();
+    }
+
+    /** If options dialog is closed override built-in actions.
+     *  (This handler will be called multiple times.) */
+    static void handleOptionsClosed() {
         Actions.overrideBuiltInActions();
-    }
-
-    /** If the options dialog opens remove overridden actions, if it's canceled
-     *  re-install them. */
-    @EditBus.EBHandler
-    public void handlePropertiesChanging(PropertiesChanging message) {
-        if(PropertiesChanging.State.LOADING.equals(message.getState())) {
-            Actions.removeOverriddenActions();
-        } else if(PropertiesChanging.State.CANCELED.equals(message.getState())) {
-            Actions.overrideBuiltInActions();
-        }
     }
     /// }}}
 
@@ -213,8 +164,8 @@ public class AnchoredSelectionPlugin extends EditPlugin {
             }
         }
         anchorMap.set(textArea, anchor);
-        caretHandler.listenTo(textArea);
-        bufferHandler.listenTo(textArea.getBuffer());
+        Handlers.caretHandler.listenTo(textArea);
+        Handlers.bufferHandler.listenTo(textArea.getBuffer());
         StatusBarWidgetManager.updateWidget(view, true);
     }
 
@@ -229,9 +180,9 @@ public class AnchoredSelectionPlugin extends EditPlugin {
         TextArea textArea = view.getTextArea();
         JEditBuffer buffer = textArea.getBuffer();
         anchorMap.remove(textArea);
-        caretHandler.removeFrom(textArea);
+        Handlers.caretHandler.removeFrom(textArea);
         if(!anchorMap.contains(buffer)) {
-            bufferHandler.removeFrom(buffer);
+            Handlers.bufferHandler.removeFrom(buffer);
         }
         StatusBarWidgetManager.updateWidget(view, false);
     }

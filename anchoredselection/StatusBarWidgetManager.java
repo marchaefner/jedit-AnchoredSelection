@@ -45,17 +45,11 @@ public class StatusBarWidgetManager implements StatusWidgetFactory {
     }
     // }}}
 
-    // {{{ Interface method for AnchoredSelectionPlugin methods.
+    // {{{ updateWidget - interface for AnchoredSelectionPlugin methods.
     static void updateWidget(View view, Boolean isAnchored) {
         StatusBarWidget widget = widgets.get(view);
         if(widget != null) {
             widget.update(isAnchored);
-        }
-    }
-
-    static void updateAllWidgets() {
-        for(StatusBarWidget widget: widgets.values()) {
-            widget.update();
         }
     }
     // }}}

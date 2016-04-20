@@ -46,7 +46,8 @@ public class Actions {
         "next-line", "prev-line"    // lose virtual width of rect selection
     };
     /** Built-in actions that open options dialog. These will be wrapped with
-     *  {@link #removeActionsAndInvoke} */
+     *  {@link #invokeOptions}. This is a workaround for the combined options
+     *  dialog since jEdit 5 which does not send a PropertiesChanging. */
     static final String[] optionActionNames = new String[]{
         "combined-options", "global-options", "plugin-options"
     };
@@ -117,10 +118,10 @@ public class Actions {
         invokeBuiltInAction(view, actionName);
     }
 
-    /** Wrapper for internal use that uninstalls all overridden/wrapped actions
-     *  before invoking the built-in action. */
-    public static void removeActionsAndInvoke(View view, String actionName) {
-        removeOverriddenActions();
+    /** Wrapper for internal use that works around the missing
+     *  PropertiesChanging message by calling the handling method explicitly. */
+    public static void invokeOptions(View view, String actionName) {
+        AnchoredSelectionPlugin.handleOptionsOpening();
         invokeBuiltInAction(view, actionName);
     }
     // }}}
@@ -165,7 +166,7 @@ public class Actions {
         addWrappers(selectActionNames, "raiseAnchorAndInvoke");
         addWrappers(copyActionNames, "raiseAnchorAndInvoke");
         addWrappers(caretMoveActionNames, "invokeSelectVariant");
-        addWrappers(optionActionNames, "removeActionsAndInvoke");
+        addWrappers(optionActionNames, "invokeOptions");
         jEdit.addActionSet(overriddenBuiltInActionSet);
     }
 
